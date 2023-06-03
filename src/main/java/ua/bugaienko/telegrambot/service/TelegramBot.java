@@ -1,17 +1,22 @@
 package ua.bugaienko.telegrambot.service;
 
+import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.bugaienko.telegrambot.config.BotConfig;
+import ua.bugaienko.telegrambot.model.User;
+import ua.bugaienko.telegrambot.model.UserRepository;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +29,7 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
 
     private final BotConfig config;
+    private final UserRepository userRepository;
 
     private static final String HELP_TEXT = "This is a bot-assistant to nutrition consultant Irina Bug.\n\n"
             + "You can execute commands from the main menu on left or by typing a command:\n\n"
@@ -32,8 +38,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             + "Type /help to see this message again";
 
     @Autowired
-    public TelegramBot(BotConfig config) {
+    public TelegramBot(BotConfig config, UserRepository userRepository) {
         this.config = config;
+        this.userRepository = userRepository;
         List<BotCommand> listOfCommands = new ArrayList<>();
         listOfCommands.add(new BotCommand("/start", "Get a welcome message"));
         listOfCommands.add(new BotCommand("/mydata", "get your data stored"));
@@ -68,6 +75,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (messageText) {
                 case "/start":
+                    registerUser(update.getMessage());
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
                 case "/help":
@@ -81,8 +89,28 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void registerUser(Message msg) {
+        if (userRepository.findById(msg.getChatId()).isEmpty()) {
+            var chatId = msg.getChatId();
+            var chat = msg.getChat();
+
+            User user = new User();
+            user.setChatId(chatId);
+            user.setFirstName(chat.getFirstName());
+            user.setLastName(chat.getLastName());
+            user.setUsername(chat.getUserName());
+            user.setActive(true);
+            user.setRegisterAt(new Timestamp(System.currentTimeMillis()));
+
+            userRepository.save(user);
+            log.info("user saved: " + user);
+        }
+    }
+
     private void startCommandReceived(long chatId, String name) {
-        String answer = "Hi, " + name + ", nice to meet you!";
+
+        String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + " :wave:");
+//        String answer = "Hi, " + name + ", nice to meet you!";
         log.info("Replied to user " + name);
 
 
@@ -94,6 +122,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+
+        
 
         try {
             execute(message);
