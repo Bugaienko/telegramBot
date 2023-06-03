@@ -1,5 +1,6 @@
 package ua.bugaienko.telegrambot.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import ua.bugaienko.telegrambot.service.TelegramBot;
  */
 
 @Component
+@Slf4j
 public class BotInitializer {
 
     private final TelegramBot bot;
@@ -27,7 +29,7 @@ public class BotInitializer {
         try {
             telegramBotsApi.registerBot(bot);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            log.error("Error occurred: " + e.getMessage());
         }
     }
 }

@@ -1,5 +1,6 @@
 package ua.bugaienko.telegrambot.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -13,6 +14,7 @@ import ua.bugaienko.telegrambot.config.BotConfig;
  */
 
 @Component
+@Slf4j
 public class TelegramBot extends TelegramLongPollingBot {
 
     private final BotConfig config;
@@ -46,6 +48,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                 break;
                 default: sendMessage(chatId, "Sorry, command was not recognize :(");
+
             }
 
         }
@@ -53,6 +56,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void startCommandReceived(long chatId, String name) {
         String answer = "Hi, " + name + ", nice to meet you!";
+        log.info("Replied to user " + name);
+
 
         sendMessage(chatId, answer);
 
@@ -66,7 +71,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+           log.error("Error occurred: " + e.getMessage());
         }
     }
 
